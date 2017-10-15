@@ -43,7 +43,7 @@ def main():
     print(all_list)
     frame = pd.DataFrame(all_list, columns = ['likes', 'img', 'post'])
     print(frame)
-    engine = create_engine('postgresql://sammyq:sammy-password@localhost:5432/sammy')
+    engine = create_engine('postgresql://memes_user:memes-password@localhost:5432/memes')
 
     frame.to_sql("bd3", engine)
 

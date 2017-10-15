@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import aiojobs
+
 import aioredis
 import asyncpg
 from aiohttp import web, WSCloseCode
@@ -31,11 +33,13 @@ def pg_dsn(settings: Settings) -> str:
 async def startup(app: web.Application):
     app['pg'] = await asyncpg.create_pool(pg_dsn(app['settings']), loop=app.loop)
     app['redis'] = await aioredis.create_pool(('localhost', 6379), loop=app.loop, encoding='utf-8')
-    app['Game'] = Game(app['redis'])
+    app['scheduler'] = await aiojobs.create_scheduler()
+    app['Game'] = Game(app['redis'], app['pg'], app['scheduler'], app['websockets'])
 
 
 async def cleanup(app: web.Application):
     await app['pg'].close()
+    # await app['redis'].delete('memes')
     app['redis'].close()
     await app['redis'].wait_closed()
 
@@ -73,9 +77,13 @@ def create_app(loop):
     app['websockets'] = []
     app['choosed'] = []
     app['perms_handlers'] = [check_user_handler]
+    print('1===================================1')
     app.on_startup.append(startup)
+    print('2===================================2')
     app.on_cleanup.append(cleanup)
+    print('3===================================3')
     app.on_shutdown.append(on_shutdown)
-
+    print('4===================================4')
     setup_routes(app, cors)
+    print('5===================================5')
     return app
