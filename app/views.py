@@ -27,13 +27,16 @@ async def websocket_handler(request):
                     data = json.loads(msg.data)
                     if data['type'] == 'CHOOSE_MEM':
                         print('CHHOSE_MEM: {}'.format(data))
-                        await game.add_choosed(ws)
-                        left, right = await game.inc_like(data['id'])
-                        for user_ws in await game.get_choosed():
-                            user_ws.send_json({
-                            'data': [json.loads(left), json.loads(right)],
-                            'type': 'MEMES_LIKES'
-                            })
+                        if ws in await game.get_choosed():
+                            ws.send_json('ИДИ НАХУЙ, ТЫ УЖЕ ГОЛОСОВАЛ')
+                        else:
+                            await game.add_choosed(ws)
+                            left, right = await game.inc_like(data['id'])
+                            for user_ws in await game.get_choosed():
+                                user_ws.send_json({
+                                'data': [json.loads(left), json.loads(right)],
+                                'type': 'MEMES_LIKES'
+                                })
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 print('ws connection closed with exception %s' %
                       ws.exception())

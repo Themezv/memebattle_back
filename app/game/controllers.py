@@ -67,6 +67,9 @@ class Game:
         if ws in self._choosed:
             self._choosed.remove(ws)
 
+    async def clear_choosed(self):
+        self._choosed = ()
+
     async def inc_like(self, input_id):
         left, right = await self.get_current_pair()
         print('left:')
@@ -75,10 +78,12 @@ class Game:
         if left_as_dict['id'] == input_id:
             left_as_dict['likes'] += 1
         else:
-            left_as_dict['likes'] += 1
+            right_as_dict['likes'] += 1
         with await self.redis as redis:
             await redis.hmset_dict('current_pair', {
                 'left': json.dumps(left_as_dict),
                 'right': json.dumps(right_as_dict)
             })
         return left, right
+
+    async def new_raund(self):
