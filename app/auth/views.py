@@ -12,9 +12,13 @@ async def check_user(request) -> bool:
     async with request.app['pg'].acquire() as connect:
         user = await connect.fetchrow('SELECT * FROM users WHERE username = $1', data['username'])
         print('this is user')
-        print(user['password'])
+        if not user:
+            return False
         hashed_pass = sha256(str.encode(str(request.app['settings'].SECRET_PASSWORD) + data['password']))
-        return user['password'] == hashed_pass.hexdigest()
+        if user['password'] == hashed_pass.hexdigest():
+            request['user'] = user
+            return True
+        return False
 
 
 async def check_auth_middleware(app, handler):
@@ -28,8 +32,23 @@ async def check_auth_middleware(app, handler):
     return middleware_handler
 
 
+async def check_user_handler(request):
+    print({
+        'status': 200,
+        'username': request['user']['username'],
+        'coins': request['user']['coins']
+    })
+    return web.json_response({
+        'status': 200,
+        'username': request['user']['username'],
+        'coins': request['user']['coins']
+    })
+
+
 async def create_user(request):
     data = await request.json()
+    print('Create user')
+    print(data)
     if not data['password'] and not data['username']:
         raise web.HTTPBadRequest()
     password_hash = sha256(str.encode((request.app['settings'].SECRET_PASSWORD) + data['password']))
@@ -38,5 +57,5 @@ async def create_user(request):
             await connect.execute("INSERT INTO users(username, password) VALUES($1, $2)",
                               data['username'], password_hash.hexdigest())
         except asyncpg.exceptions.UniqueViolationError:
-            return web.json_response({'status': '400', 'message': 'user already exist'})
-    return web.json_response({'status': '200'})
+            return web.json_response({'status': 409, 'message': 'user already exist'}, status=409)
+    return web.json_response({'status': 200}, status=200)

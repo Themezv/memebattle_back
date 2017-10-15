@@ -4,11 +4,14 @@ import aioredis
 import asyncpg
 from aiohttp import web, WSCloseCode
 
-from .settings import Settings
-from .views import index, websocket_handler
-from .auth.views import create_user, check_auth_middleware
+from app.settings import Settings
+from app.views import index, websocket_handler
+from app.auth.views import create_user, check_auth_middleware, check_user_handler
+
+from app.game.controllers import Game
 
 import aiohttp_cors
+
 
 THIS_DIR = Path(__file__).parent
 BASE_DIR = THIS_DIR.parent
@@ -28,6 +31,7 @@ def pg_dsn(settings: Settings) -> str:
 async def startup(app: web.Application):
     app['pg'] = await asyncpg.create_pool(pg_dsn(app['settings']), loop=app.loop)
     app['redis'] = await aioredis.create_pool(('localhost', 6379), loop=app.loop, encoding='utf-8')
+    app['Game'] = Game(app['redis'])
 
 
 async def cleanup(app: web.Application):
@@ -39,8 +43,9 @@ async def cleanup(app: web.Application):
 def setup_routes(app, cors):
     app.router.add_get('/', index, name='index')
     app.router.add_route('*', '/ws', websocket_handler)
-    app.router.add_put('/auth', create_user, name='create_user')
     cors.add(app.router['index'])
+    cors.add(app.router.add_put('/auth', create_user, name='create_user'))
+    cors.add(app.router.add_post('/auth', check_user_handler, name='check_user'))
 
 
 async def on_shutdown(app):
@@ -66,7 +71,8 @@ def create_app(loop):
     })
 
     app['websockets'] = []
-    app['perms_handlers'] = []
+    app['choosed'] = []
+    app['perms_handlers'] = [check_user_handler]
     app.on_startup.append(startup)
     app.on_cleanup.append(cleanup)
     app.on_shutdown.append(on_shutdown)
