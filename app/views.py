@@ -1,34 +1,43 @@
+import aiohttp
+import json
+
 from aiohttp import web
 
 
-# in the name of brevity we return stripped down html, this works fine on chrome but shouldn't be used in production
-# the <body> tag is required to activate aiohttp-debugtoolbar.
-BASE_PAGE = """\
-<title>{title}</title>
-<head>
-<link href="{styles_css_url}" rel="stylesheet">
-</head>
-<body>
-<main>
-  <h1>{title}</h1>
-  {content}
-</main>
-</body>"""
-
-
 async def index(request):
-    """
-    This is the view handler for the "/" url.
+    with await request.app['redis'] as redis:
+        val = await redis.get('artem')
+    return web.json_response({'val': val})
 
-    **Note: returning html without a template engine like jinja2 is ugly, no way around that.**
 
-    :param request: the request object see http://aiohttp.readthedocs.io/en/stable/web_reference.html#request
-    :return: aiohttp.web.Response object
-    """
-    ctx = dict(
-        title=request.app['name'],
-        styles_css_url=request.app['static_root_url'] + '/styles.css',
-        content="<p>Success! you've setup a basic aiohttp app.</p>",
-    )
-    # with the base web.Response type we have to manually set the content type, otherwise text/plain will be used.
-    return web.Response(text=BASE_PAGE.format(**ctx), content_type='text/html')
+async def websocket_handler(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+
+    request.app['websockets'].append(ws)
+    try:
+        async for msg in ws:
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                if msg.data == 'close':
+                    await ws.close()
+                else:
+                    print('msg: {}'.format(msg.data))
+                    data = json.loads(msg.data)
+                    if data['type'] == 'CHOOSE_MEM':
+                        print('choose {} mem'.format(data['id']))
+                        ws.send_json({
+                            'data': [{'memes': 1, 'likes': 10}, {'memes': 2, 'likes': 15}],
+                            'type': 'MEMES_LIKES'
+                        })
+                    # for soc in request.app['websockets']:
+                    #     await soc.send_json(msg.data)
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                print('ws connection closed with exception %s' %
+                      ws.exception())
+    finally:
+        print('Final')
+        request.app['websockets'].remove(ws)
+
+    print('websocket connection closed')
+
+    return ws

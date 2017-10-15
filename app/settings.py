@@ -24,6 +24,7 @@ class Settings:
     DB_PASSWORD = Required(str)
     DB_HOST = 'localhost'
     DB_PORT = '5432'
+    SECRET_PASSWORD = 'a4337bc45a8fc544c03f52dc550cd6e1e87021bc896588bd79e901e2'
 
     def __init__(self, **custom_settings):
         """

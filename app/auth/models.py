@@ -5,14 +5,11 @@ Base = declarative_base()
 
 
 class User(Base):
-    __tablename__ = 'useres'
+    __tablename__ = 'users'
     id = Column(Integer, Sequence('msg_id_seq'), primary_key=True, nullable=False)
-    username = Column(String(40), nullable=False)
+    username = Column(String(40), nullable=False, unique=True)
     password = Column(String(64), nullable=False)
+    coins = Column(Integer, default=0)
 
+sa_users = User.__table__
 
-class Stat(Base):
-    __tablename__ = 'stats'
-
-
-sa_messages = User.__table__
