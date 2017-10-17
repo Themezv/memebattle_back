@@ -40,7 +40,7 @@ class Game:
         print('Create game')
         with await self.redis as redis:
             async with self.pg.acquire() as connect:
-                for mem in await connect.fetch('SELECT * FROM bd3 WHERE likes > 5000 LIMIT 32;'):
+                for mem in await connect.fetch('SELECT * FROM bd3 ORDER BY likes LIMIT 32;'):
                     await redis.hset('memes', mem['index'], json.dumps({
                             'url': mem['img'],
                             'id': mem['index'],
