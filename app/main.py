@@ -7,7 +7,7 @@ import asyncpg
 from aiohttp import web, WSCloseCode
 
 from app.settings import Settings
-from app.views import index, websocket_handler
+from app.views import index, websocket_handler, start_game
 from app.auth.views import create_user, check_auth_middleware, check_user_handler
 
 from app.game.controllers import Game
@@ -35,6 +35,7 @@ async def startup(app: web.Application):
     app['redis'] = await aioredis.create_pool(('localhost', 6379), loop=app.loop, encoding='utf-8')
     app['scheduler'] = await aiojobs.create_scheduler()
     app['Game'] = Game(app['redis'], app['pg'], app['scheduler'], app['websockets'])
+    app['game_started'] = False
 
 
 async def cleanup(app: web.Application):
@@ -47,6 +48,7 @@ async def cleanup(app: web.Application):
 def setup_routes(app, cors):
     app.router.add_get('/', index, name='index')
     app.router.add_route('*', '/ws', websocket_handler)
+    app.router.add_post('/start_game', start_game, name='start_game')
     cors.add(app.router['index'])
     cors.add(app.router.add_put('/auth', create_user, name='create_user'))
     cors.add(app.router.add_post('/auth', check_user_handler, name='check_user'))
@@ -76,7 +78,7 @@ def create_app(loop):
 
     app['websockets'] = []
     app['choosed'] = []
-    app['perms_handlers'] = [check_user_handler]
+    app['perms_handlers'] = [check_user_handler, start_game]
     print('1===================================1')
     app.on_startup.append(startup)
     print('2===================================2')

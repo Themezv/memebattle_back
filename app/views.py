@@ -5,11 +5,24 @@ from aiohttp import web
 
 from app.game.controllers import Game
 
+
 async def index(request):
-    await request.app['Game'].create_game()
+    #await request.app['Game'].create_game()
     # with await request.app['redis'] as redis:
     #     val = await redis.get('artem')
     return web.json_response({'stage': 0})
+
+
+async def start_game(request):
+    status = False
+    if not request.app['game_started']:
+        await request.app['Game'].create_game()
+        status = 'created'
+        request.app['game_started'] = True
+    else:
+        status = 'exist'
+
+    return web.json_response({'game': status})
 
 
 async def websocket_handler(request):
