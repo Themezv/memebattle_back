@@ -38,7 +38,7 @@ sanic==0.6.0
 six==1.11.0
 SQLAlchemy==1.1.11
 typing==3.6.2
-ujson==1.35
+ujson==5.4.0
 urllib3==1.22
 uvloop==0.8.1
 watchdog==0.8.3
